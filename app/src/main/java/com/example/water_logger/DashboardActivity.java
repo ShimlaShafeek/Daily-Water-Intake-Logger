@@ -22,7 +22,8 @@ public class DashboardActivity extends AppCompatActivity {
     private WaterLevelView waterView;
     private TextView tvRemaining, tvTargetMl, tvTargetPercent;
     private int targetMl = 2000;
-    private int currentMl = 750;
+    private int currentMl = 0;
+    private DatabaseHelper db;
 
     private final ActivityResultLauncher<Intent> drinkActivityLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -39,6 +40,8 @@ public class DashboardActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        db = new DatabaseHelper(this);
 
         waterView = findViewById(R.id.waterView);
         tvRemaining = findViewById(R.id.tvRemaining);
@@ -93,6 +96,7 @@ public class DashboardActivity extends AppCompatActivity {
 
     private void addMl(int add) {
         currentMl += add;
+        db.addWaterRecord(add); // Save the record
         updateUI();
     }
 
