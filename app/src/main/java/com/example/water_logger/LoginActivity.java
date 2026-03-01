@@ -3,18 +3,32 @@ package com.example.water_logger;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 
 public class LoginActivity extends AppCompatActivity {
 
+    private static final int RC_SIGN_IN = 9001;
+    private static final String TAG = "LoginActivity";
+
+    private GoogleSignInClient mGoogleSignInClient;
+    private Button btnSignInWithGoogle;
     EditText etEmail, etPassword;
     Button btnLogin;
-    TextView tvRegisterNow;
+    TextView tvSignUp;
     DatabaseHelper db;
 
     @SuppressLint("MissingInflatedId")
@@ -28,14 +42,20 @@ public class LoginActivity extends AppCompatActivity {
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
-        tvRegisterNow = findViewById(R.id.tvRegisterNow);
+        tvSignUp = findViewById(R.id.tvSignUp);
+        btnSignInWithGoogle = findViewById(R.id.btnSignInWithGoogle);
 
-        tvRegisterNow.setOnClickListener(v -> {
+        // Configure Google Sign In
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build();
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
+
+        tvSignUp.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
         });
 
         btnLogin.setOnClickListener(v -> {
-
             String email = etEmail.getText().toString().trim();
             String password = etPassword.getText().toString().trim();
 
@@ -55,5 +75,46 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(this, "Invalid Email or Password", Toast.LENGTH_SHORT).show();
             }
         });
+
+        btnSignInWithGoogle.setOnClickListener(v -> signIn());
+    }
+
+    private void signIn() {
+        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+        startActivityForResult(signInIntent, RC_SIGN_IN);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
+        if (requestCode == RC_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            handleSignInResult(task);
+        }
+    }
+
+    private void handleSignInResult(Task<GoogleSignInAccount> completedTask) {
+        try {
+            GoogleSignInAccount account = completedTask.getResult(ApiException.class);
+            // Signed in successfully, show authenticated UI.
+            updateUI(account);
+        } catch (ApiException e) {
+            // The ApiException status code indicates the detailed failure reason.
+            // Please refer to the GoogleSignInStatusCodes class reference for more information.
+            Log.w(TAG, "signInResult:failed code=" + e.getStatusCode());
+            updateUI(null);
+        }
+    }
+
+    private void updateUI(@Nullable GoogleSignInAccount account) {
+        if (account != null) {
+            Intent intent = new Intent(LoginActivity.this, GoogleSignInActivity.class);
+            startActivity(intent);
+            finish();
+        } else {
+            Toast.makeText(this, "Google Sign-In Failed", Toast.LENGTH_SHORT).show();
+        }
     }
 }
