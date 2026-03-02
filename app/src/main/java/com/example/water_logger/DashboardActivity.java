@@ -1,6 +1,7 @@
 package com.example.water_logger;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -21,9 +22,12 @@ public class DashboardActivity extends AppCompatActivity {
 
     private WaterLevelView waterView;
     private TextView tvRemaining, tvTargetMl, tvTargetPercent;
-    private int targetMl = 2000;
+    private int targetMl;
     private int currentMl = 0;
     private DatabaseHelper db;
+
+    private static final String PREFS_NAME = "WaterLoggerPrefs";
+    private static final String KEY_TARGET_ML = "targetMl";
 
     private final ActivityResultLauncher<Intent> drinkActivityLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -40,6 +44,9 @@ public class DashboardActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        targetMl = prefs.getInt(KEY_TARGET_ML, 2000); // Load the saved goal, default to 2000
 
         db = new DatabaseHelper(this);
 
@@ -95,6 +102,8 @@ public class DashboardActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        targetMl = prefs.getInt(KEY_TARGET_ML, 2000); // Reload goal in case it was changed elsewhere
         currentMl = db.getTodayTotalIntake();
         updateUI();
     }
@@ -141,11 +150,16 @@ public class DashboardActivity extends AppCompatActivity {
                     int newGoal = Integer.parseInt(goalStr);
                     if (newGoal > 0) {
                         targetMl = newGoal;
+                        // Save the new goal
+                        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                        editor.putInt(KEY_TARGET_ML, newGoal);
+                        editor.apply();
+
                         updateUI();
                         dialog.dismiss();
                     }
                 } catch (NumberFormatException e) {
-                    // You could show a Toast here to inform the user of invalid input
+                    Toast.makeText(this, "Invalid number format", Toast.LENGTH_SHORT).show();
                 }
             }
         });
