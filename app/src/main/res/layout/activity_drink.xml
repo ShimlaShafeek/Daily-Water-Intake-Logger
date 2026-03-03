@@ -142,7 +142,7 @@
         android:textColor="@android:color/white"
         app:cornerRadius="18dp"
         app:backgroundTint="#1D4EFF"
-        app:rippleColor="#80FFFFFF"
+        app:rippleColor="#CCFFFFFF"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>

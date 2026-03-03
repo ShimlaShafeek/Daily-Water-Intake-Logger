@@ -118,17 +118,18 @@
                 android:text="@string/login_forgot_password"
                 android:textColor="#3B82F6" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLogin"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
-                android:background="@drawable/button_background"
                 android:text="@string/login_button_text"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"
                 android:textSize="18sp"
-                android:textStyle="bold" />
-
+                android:textStyle="bold"
+                app:backgroundTint="#0B5FFF"
+                app:rippleColor="#CCFFFFFF"
+                app:cornerRadius="16dp"/>
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
