@@ -25,7 +25,6 @@ public class DashboardActivity extends AppCompatActivity {
     private int userId;
 
     private static final String PREFS_NAME = "WaterLoggerPrefs";
-    private static final String KEY_TARGET_ML = "targetMl";
     private static final String KEY_USER_ID = "userId";
 
     private final ActivityResultLauncher<Intent> drinkActivityLauncher = registerForActivityResult(
@@ -56,8 +55,20 @@ public class DashboardActivity extends AppCompatActivity {
         }
 
         db = new DatabaseHelper(this);
+        // Archive yesterday summary if missing (stores whether previous day completed and the totals)
+        db.archiveYesterdayIfMissing(userId);
         // Load per-user target from DB (defaults to 2000 if not present)
         targetMl = db.getUserTarget(userId);
+
+        // If the DB returned the default (2000) or an invalid value (<=0), try to recover the user's
+        // previously saved target from SharedPreferences (saved at login). This guards against
+        // unexpected DB resets where the target may revert to 2000.
+        int prefKeyTarget = prefs.getInt("targetMl_" + userId, -1);
+        if (prefKeyTarget > 0 && prefKeyTarget != targetMl) {
+            // restore pref value into DB and memory
+            db.setUserTarget(userId, prefKeyTarget);
+            targetMl = prefKeyTarget;
+        }
 
         waterView = findViewById(R.id.waterView);
         tvRemaining = findViewById(R.id.tvRemaining);
@@ -108,14 +119,34 @@ public class DashboardActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (userId != -1) {
+            // archive yesterday again in case app resumed across midnight
+            db.archiveYesterdayIfMissing(userId);
             // reload values from DB in case target or today's intake changed
             targetMl = db.getUserTarget(userId);
+
+            // again attempt to recover user's target from SharedPreferences if DB shows default/invalid
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            int prefKeyTarget = prefs.getInt("targetMl_" + userId, -1);
+            if (prefKeyTarget > 0 && prefKeyTarget != targetMl) {
+                db.setUserTarget(userId, prefKeyTarget);
+                targetMl = prefKeyTarget;
+            }
+
             currentMl = db.getTodayTotalIntake(userId);
             updateUI();
         }
     }
 
     private void addMl(int add) {
+        // If day already marked completed, ignore and inform user
+        if (db.isDayCompleted(userId)) {
+            Toast.makeText(this, "Daily goal already completed — additional entries ignored for today.", Toast.LENGTH_SHORT).show();
+            // refresh totals from DB just in case
+            currentMl = db.getTodayTotalIntake(userId);
+            updateUI();
+            return;
+        }
+
         db.addWaterRecord(userId, add);
         currentMl = db.getTodayTotalIntake(userId);
         updateUI();
@@ -159,6 +190,11 @@ public class DashboardActivity extends AppCompatActivity {
                         // save per-user target into the database
                         db.setUserTarget(userId, newGoal);
 
+                        // persist into SharedPreferences as well so it can be restored if needed
+                        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                        editor.putInt("targetMl_" + userId, newGoal);
+                        editor.apply();
+
                         // notify other screens (MeActivity) via in-app bus
                         TargetUpdateBus.notifyTargetUpdated(userId, newGoal);
 
@@ -185,7 +221,7 @@ public class DashboardActivity extends AppCompatActivity {
     private void showGoalCompletedDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Goal Achieved!")
-                .setMessage("Congratulations! You\'ve reached your daily water intake goal.")
+                .setMessage("Congratulations! You've reached your daily water intake goal.")
                 .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
                 .show();
     }

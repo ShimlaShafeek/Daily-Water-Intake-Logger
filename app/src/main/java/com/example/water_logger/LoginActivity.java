@@ -84,12 +84,24 @@ public class LoginActivity extends AppCompatActivity {
                 cursor.close();
 
                 // Save user ID, name, and email to SharedPreferences
-                SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                SharedPreferences.Editor editor = prefs.edit();
                 editor.putInt(KEY_USER_ID, userId);
                 editor.putString(KEY_USERNAME, username);
                 editor.putString(KEY_EMAIL, userEmail);
-                // also load per-user target from DB and save to prefs for compatibility
+
+                // Load per-user target from DB
                 int userTarget = db.getUserTarget(userId);
+
+                // If we previously saved a custom target in SharedPreferences, prefer that over DB default
+                int prefKeyTarget = prefs.getInt("targetMl_" + userId, -1);
+                if (prefKeyTarget > 0 && prefKeyTarget != userTarget) {
+                    // restore pref value into DB and use it
+                    db.setUserTarget(userId, prefKeyTarget);
+                    userTarget = prefKeyTarget;
+                }
+
+                // Persist chosen target into prefs for future recovery
                 editor.putInt("targetMl_" + userId, userTarget);
                 editor.apply();
 

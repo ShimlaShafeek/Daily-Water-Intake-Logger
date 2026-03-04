@@ -14,7 +14,7 @@ import java.util.Locale;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "WaterApp.db";
-    private static final int DATABASE_VERSION = 9; // bumped to 9 to add target column to water_records
+    private static final int DATABASE_VERSION = 11; // bumped to 11 to add remaining to daily_summary
 
     // Users table
     private static final String TABLE_USERS = "users";
@@ -40,6 +40,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_SUMMARY_USER_ID = "user_id";
     private static final String COLUMN_DATE = "date";
     private static final String COLUMN_IS_COMPLETED = "is_completed";
+    private static final String COLUMN_SUMMARY_TOTAL = "total"; // total intake for that day
+    private static final String COLUMN_SUMMARY_REMAINING = "remaining"; // remaining amount to reach target
 
     private static final SimpleDateFormat YMD =
             new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
@@ -72,6 +74,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + COLUMN_SUMMARY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + COLUMN_SUMMARY_USER_ID + " INTEGER, "
                 + COLUMN_DATE + " TEXT, "
+                + COLUMN_SUMMARY_TOTAL + " INTEGER DEFAULT 0, "
+                + COLUMN_SUMMARY_REMAINING + " INTEGER DEFAULT 0, "
                 + COLUMN_IS_COMPLETED + " INTEGER DEFAULT 0, "
                 + "UNIQUE(" + COLUMN_SUMMARY_USER_ID + ", " + COLUMN_DATE + "))";
         db.execSQL(CREATE_DAILY_SUMMARY_TABLE);
@@ -92,6 +96,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (oldVersion < 9) {
             try {
                 db.execSQL("ALTER TABLE " + TABLE_WATER_RECORDS + " ADD COLUMN " + COLUMN_RECORD_TARGET + " INTEGER DEFAULT 2000");
+            } catch (Exception ignored) {
+            }
+        }
+        // If upgrading from versions older than 10, add the total column to daily_summary
+        if (oldVersion < 10) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_DAILY_SUMMARY + " ADD COLUMN " + COLUMN_SUMMARY_TOTAL + " INTEGER DEFAULT 0");
+            } catch (Exception ignored) {
+            }
+        }
+        // If upgrading from versions older than 11, add the remaining column to daily_summary
+        if (oldVersion < 11) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_DAILY_SUMMARY + " ADD COLUMN " + COLUMN_SUMMARY_REMAINING + " INTEGER DEFAULT 0");
             } catch (Exception ignored) {
             }
         }
@@ -146,7 +164,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         int target = 2000;
         if (cursor.moveToFirst()) {
             try {
-                target = cursor.getInt(0);
+                // defensive: if value is null or non-positive, fall back to default
+                int val = cursor.isNull(0) ? 0 : cursor.getInt(0);
+                if (val > 0) target = val;
             } catch (Exception ignored) {
             }
         }
@@ -159,10 +179,29 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
         values.put(COLUMN_TARGET_ML, targetMl);
         db.update(TABLE_USERS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(userId)});
+
+        // After changing the target, update today's daily_summary so the completion state
+        // reflects the new target (if today's total >= new target, mark completed; otherwise clear completed)
+        String today = getTodayDateString();
+        int totalToday = getTotalForDate(userId, today);
+        int remaining = Math.max(0, targetMl - totalToday);
+        int completed = (totalToday >= targetMl) ? 1 : 0;
+
+        ContentValues summaryValues = new ContentValues();
+        summaryValues.put(COLUMN_SUMMARY_USER_ID, userId);
+        summaryValues.put(COLUMN_DATE, today);
+        summaryValues.put(COLUMN_SUMMARY_TOTAL, totalToday);
+        summaryValues.put(COLUMN_SUMMARY_REMAINING, remaining);
+        summaryValues.put(COLUMN_IS_COMPLETED, completed);
+
+        db.insertWithOnConflict(TABLE_DAILY_SUMMARY, null, summaryValues, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     // ---------- Water Records ----------
     public void addWaterRecord(int userId, int amount) {
+        // If today's summary already marked as completed, ignore further inputs for today
+        if (isDayCompleted(userId)) return;
+
         SQLiteDatabase db = this.getWritableDatabase();
         long ts = System.currentTimeMillis();
         String dateStr = YMD.format(new Date(ts));
@@ -267,6 +306,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_DATE, today);
         values.put(COLUMN_IS_COMPLETED, 1);
 
+        // Also update the total intake for the day
+        int totalIntake = getTodayTotalIntake(userId);
+        values.put(COLUMN_SUMMARY_TOTAL, totalIntake);
+
+        // store remaining (target - total, not negative)
+        int target = getUserTarget(userId);
+        int remaining = Math.max(0, target - totalIntake);
+        values.put(COLUMN_SUMMARY_REMAINING, remaining);
+
         db.insertWithOnConflict(TABLE_DAILY_SUMMARY, null, values, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
@@ -287,5 +335,44 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         cursor.close();
         return completed;
+    }
+
+    // Ensure a daily_summary row exists for the given date. If missing, insert with total/is_completed/remaining
+    public void ensureDailySummaryForDate(int userId, String yyyyMmDd) {
+        if (summaryExistsForDate(userId, yyyyMmDd)) return;
+
+        int total = getTotalForDate(userId, yyyyMmDd);
+        int target = getUserTarget(userId);
+        int remaining = Math.max(0, target - total);
+        int completed = total >= target ? 1 : 0;
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_SUMMARY_USER_ID, userId);
+        values.put(COLUMN_DATE, yyyyMmDd);
+        values.put(COLUMN_SUMMARY_TOTAL, total);
+        values.put(COLUMN_SUMMARY_REMAINING, remaining);
+        values.put(COLUMN_IS_COMPLETED, completed);
+
+        db.insertWithOnConflict(TABLE_DAILY_SUMMARY, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    public boolean summaryExistsForDate(int userId, String yyyyMmDd) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(
+                "SELECT 1 FROM " + TABLE_DAILY_SUMMARY + " WHERE " + COLUMN_SUMMARY_USER_ID + " = ? AND " + COLUMN_DATE + " = ? LIMIT 1",
+                new String[]{String.valueOf(userId), yyyyMmDd}
+        );
+        boolean exists = cursor.moveToFirst();
+        cursor.close();
+        return exists;
+    }
+
+    // Archive previous day summary if it doesn't already exist. Call this at app start/resume.
+    public void archiveYesterdayIfMissing(int userId) {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, -1);
+        String yesterday = YMD.format(cal.getTime());
+        ensureDailySummaryForDate(userId, yesterday);
     }
 }
