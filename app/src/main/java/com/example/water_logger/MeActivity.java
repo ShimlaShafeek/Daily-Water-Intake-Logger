@@ -19,6 +19,7 @@ public class MeActivity extends AppCompatActivity {
     private static final String KEY_USERNAME = "username";
     private static final String KEY_EMAIL = "email";
     private static final String KEY_USER_ID = "userId"; // saved at login
+    private static final String KEY_TARGET_ML = "targetMl";
 
     private DatabaseHelper db;
     private int userId = -1;
@@ -46,47 +47,26 @@ public class MeActivity extends AppCompatActivity {
         if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        userId = prefs.getInt(KEY_USER_ID, -1);
         String username = prefs.getString(KEY_USERNAME, "Username");
         String email = prefs.getString(KEY_EMAIL, "user@example.com");
-        userId = prefs.getInt(KEY_USER_ID, -1);
 
         TextView usernameText = findViewById(R.id.username_text);
         TextView emailText = findViewById(R.id.email_text);
+        TextView tvTodayProgress = findViewById(R.id.tvTodayProgress);
 
         usernameText.setText(username);
         emailText.setText(email);
 
-        // DB helper
-        db = new DatabaseHelper(this);
-
-        // water views
-        tvBigWater = findViewById(R.id.tvBigWater);
-        tvWaterTarget = findViewById(R.id.tvWaterTarget);
-
-        // initialize display
-        updateWaterDisplay();
+        if (userId != -1) {
+            DatabaseHelper db = new DatabaseHelper(this);
+            int currentMl = db.getTodayTotalIntake(userId);
+            int targetMl = prefs.getInt(KEY_TARGET_ML + "_" + userId, 2000);
+            tvTodayProgress.setText(getString(R.string.today_water_value_format, currentMl, targetMl));
+        }
 
         Button logoutButton = findViewById(R.id.logout_button);
-        logoutButton.setOnClickListener(v -> {
-            // Show confirmation dialog before logging out
-            new MaterialAlertDialogBuilder(MeActivity.this)
-                    .setTitle("Confirm logout")
-                    .setMessage("Are you sure you want to log out?")
-                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
-                    .setPositiveButton("Confirm", (dialog, which) -> {
-                        // Clear user session
-                        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
-                        editor.clear();
-                        editor.apply();
-
-                        // Navigate to LoginActivity
-                        Intent intent = new Intent(MeActivity.this, LoginActivity.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        startActivity(intent);
-                        finish();
-                    })
-                    .show();
-        });
+        logoutButton.setOnClickListener(v -> showLogoutConfirmationDialog());
 
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
         bottomNavigationView.setSelectedItemId(R.id.navigation_me);
@@ -98,47 +78,34 @@ public class MeActivity extends AppCompatActivity {
             } else if (itemId == R.id.navigation_history) {
                 startActivity(new Intent(MeActivity.this, HistoryActivity.class));
                 return true;
+            } else if (itemId == R.id.navigation_me) {
+                return true;
             }
-            // already on `me`
-            return true;
+            return false;
         });
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Refresh water values in case they changed elsewhere
-        updateWaterDisplay();
-        // register in-app bus listener
-        TargetUpdateBus.register(targetUpdateListener);
-    }
+    private void showLogoutConfirmationDialog() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Logout")
+                .setMessage("Are you sure you want to log out?")
+                .setPositiveButton("Logout", (dialog, which) -> {
+                    SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+                    editor.clear();
+                    editor.apply();
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        TargetUpdateBus.unregister(targetUpdateListener);
-    }
-
-    private void updateWaterDisplay() {
-        if (tvBigWater == null) return;
-
-        if (userId != -1 && db != null) {
-            int currentMl = db.getTodayTotalIntake(userId);
-            tvBigWater.setText(getString(R.string.today_current_format, currentMl));
-
-            // update target from DB (not SharedPreferences) to stay consistent
-            int target = db.getUserTarget(userId);
-            if (tvWaterTarget != null) tvWaterTarget.setText(getString(R.string.today_target_format, target));
-        } else {
-            // fallback to static resource
-            tvBigWater.setText(getString(R.string.today_current));
-            if (tvWaterTarget != null) tvWaterTarget.setText(getString(R.string.today_target));
-        }
+                    Intent intent = new Intent(MeActivity.this, LoginActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     @Override
     public boolean onSupportNavigateUp() {
-        getOnBackPressedDispatcher().onBackPressed();
+        onBackPressed();
         return true;
     }
 }
