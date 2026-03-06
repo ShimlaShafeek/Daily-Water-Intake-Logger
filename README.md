@@ -19,7 +19,7 @@
 ## 📝 Project Description
 **Water_Logger** is a modern Android application designed to help users build healthier hydration habits through daily water intake tracking. The app provides a clean, data-driven environment where users can set personal goals, monitor their progress with intuitive visualisations, and stay on track with a smart, personalised reminder system.
 
-The app's design philosophy is rooted in **Clarity, Fluidity, and Motivation** using wave animations, smooth gradients, and glassmorphism effects to turn a daily health routine into an engaging habit-building experience.
+The app's design philosophy is rooted in **Clarity, Fluidity, and Motivation** using wave animations, smooth gradients, and glassmorphism effects to turn a daily health routine into an engaging habit building experience.
 
 Users can register a personal account, log in securely, record their water intake, set custom hydration targets, and review their history over time all stored locally using a SQLite database.
 
@@ -44,7 +44,7 @@ Users can register a personal account, log in securely, record their water intak
 ### ⏰ Smart Reminders
 - **Personalised Schedule** — User-specific reminders (e.g. "After Wake-up", "Before Lunch") stored in a dedicated database table with a label, time, and enabled toggle
 - **M3 Switch Toggles** — Individual reminders can be enabled or disabled without deleting them
-- **Real-Time Countdown** — A background `Handler` loop updates the "Time Until Next Reminder" display every minute on the Dashboard
+- **Real Time Countdown** — A background `Handler` loop updates the "Time Until Next Reminder" display every minute on the Dashboard
 - **Intelligent Rollover** — Automatically calculates the next active reminder for the current day, or rolls over to the first enabled reminder the following morning
 
 ### 📊 Data Visualisation
@@ -72,7 +72,7 @@ Users can register a personal account, log in securely, record their water intak
 - **Wave Progress View** — Animated sine-wave fills to reflect current intake vs. daily target in real time
 - **Info Cards** — Total intake today, remaining amount, and current target displayed at a glance
 - **Real-Time Countdown** — Updates every minute to show time remaining until the next enabled reminder
-- **Quick-Add Buttons** — One-tap cards (150 ml, 250 ml, 300 ml) for fast logging without navigating away
+- **Quick Add Buttons** — One-tap cards (150 ml, 250 ml, 300 ml) for fast logging without navigating away
 - **Session Management** — Auto-redirects to Login if no active session; logout available from the profile screen
 
 ### Reminders Features ✅
@@ -91,7 +91,7 @@ Users can register a personal account, log in securely, record their water intak
 ### 💧 Add Drink Page Features ✅
 - **Custom Volume Input** — Precise logging for any amount of water beyond the dashboard presets
 - **Visual Confirmation** — Engaging UI that confirms the amount added before saving to the database
-- **Real-Time Synchronisation** — Instantly updates the dashboard progress and wave animation upon returning from the screen
+- **Real Time Synchronisation** — Instantly updates the dashboard progress and wave animation upon returning from the screen
 - **Snapshot Recording** — Automatically captures the time and the user's current goal at the moment of logging
 
 ### 👤 Me (Profile) Page Features ✅
@@ -263,7 +263,7 @@ Daily-Water-Intake-Logger/
    - Navigate to the cloned folder and open it
 
 3. **Gradle Sync**
-   - Android Studio will auto-sync dependencies (MPAndroidChart, jBCrypt, etc.)
+   - Android Studio will auto sync dependencies (MPAndroidChart, jBCrypt, etc.)
    - If not, click **"Sync Now"** in the notification bar
 
 4. **Run the App**
@@ -285,7 +285,7 @@ Daily-Water-Intake-Logger/
 | :--- | :--- | :--- |
 | **Team Lead & Main Developer** | Kalpa Dhananjaya | Architecture, SQLite database, BCrypt logic, Dashboard & session management |
 | **Login & Register and Database Creation** | Rifky Nazar | Page creation, wave animation, validations, database handle |
-| **Logic Specialist** | Simla | Reminder system, chart integration, history fragments, event bus |
+| **Logic Specialist** | Shimla | Reminder system, chart integration, history fragments, event bus |
 
 ---
 
