@@ -284,7 +284,7 @@ Daily-Water-Intake-Logger/
 | Role | Name | Responsibilities |
 | :--- | :--- | :--- |
 | **Team Lead & Main Developer** | Kalpa Dhananjaya | Architecture, SQLite database, BCrypt logic, Dashboard & session management |
-| **Login & Register and Database Creation** | Rifky Nazar] | Page creation, wave animation, validations, database handle |
+| **Login & Register and Database Creation** | Rifky Nazar | Page creation, wave animation, validations, database handle |
 | **Logic Specialist** | [Name] | Reminder system, chart integration, history fragments, event bus |
 
 ---
@@ -314,5 +314,5 @@ Fix: Resolve Reminder constructor mismatch in DatabaseHelper
 
 ---
 
-📄 License
+## 📄 License
 This project is developed for academic purposes as part of the ICT3214 — Mobile Application Development module. 🌊
