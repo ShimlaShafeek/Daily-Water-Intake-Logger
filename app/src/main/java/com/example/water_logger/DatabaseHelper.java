@@ -6,15 +6,19 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "WaterApp.db";
-    private static final int DATABASE_VERSION = 11; // bumped to 11 to add remaining to daily_summary
+    private static final int DATABASE_VERSION = 14;
 
     // Users table
     private static final String TABLE_USERS = "users";
@@ -23,7 +27,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_EMAIL = "email";
     private static final String COLUMN_PHONE = "phone";
     private static final String COLUMN_PASSWORD = "password";
-    private static final String COLUMN_TARGET_ML = "target_ml"; // per-user target
+    private static final String COLUMN_TARGET_ML = "target_ml";
 
     // Water records table
     private static final String TABLE_WATER_RECORDS = "water_records";
@@ -32,7 +36,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_TIMESTAMP = "timestamp";
     private static final String COLUMN_AMOUNT = "amount";
     private static final String COLUMN_RECORD_DATE = "date";
-    private static final String COLUMN_RECORD_TARGET = "target"; // snapshot of user target when record created
+    private static final String COLUMN_RECORD_TARGET = "target";
 
     // Daily Summary table
     private static final String TABLE_DAILY_SUMMARY = "daily_summary";
@@ -40,8 +44,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_SUMMARY_USER_ID = "user_id";
     private static final String COLUMN_DATE = "date";
     private static final String COLUMN_IS_COMPLETED = "is_completed";
-    private static final String COLUMN_SUMMARY_TOTAL = "total"; // total intake for that day
-    private static final String COLUMN_SUMMARY_REMAINING = "remaining"; // remaining amount to reach target
+    private static final String COLUMN_SUMMARY_TOTAL = "total";
+    private static final String COLUMN_SUMMARY_REMAINING = "remaining";
+
+    // Reminders table
+    private static final String TABLE_REMINDERS = "reminders";
+    private static final String COLUMN_REMINDER_ID = "id";
+    private static final String COLUMN_REMINDER_USER_ID = "user_id";
+    private static final String COLUMN_REMINDER_NAME = "name";
+    private static final String COLUMN_REMINDER_TIME = "time";
+    private static final String COLUMN_REMINDER_IS_ENABLED = "is_enabled";
 
     private static final SimpleDateFormat YMD =
             new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
@@ -80,47 +92,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + "UNIQUE(" + COLUMN_SUMMARY_USER_ID + ", " + COLUMN_DATE + "))";
         db.execSQL(CREATE_DAILY_SUMMARY_TABLE);
 
+        createRemindersTable(db);
+
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_water_records_user_date ON " + TABLE_WATER_RECORDS + "(" + COLUMN_USER_ID + ", " + COLUMN_RECORD_DATE + ")");
+    }
+
+    private void createRemindersTable(SQLiteDatabase db) {
+        String CREATE_REMINDERS_TABLE = "CREATE TABLE " + TABLE_REMINDERS + " ("
+                + COLUMN_REMINDER_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COLUMN_REMINDER_USER_ID + " INTEGER, "
+                + COLUMN_REMINDER_NAME + " TEXT, "
+                + COLUMN_REMINDER_TIME + " TEXT, "
+                + COLUMN_REMINDER_IS_ENABLED + " INTEGER DEFAULT 1, "
+                + "UNIQUE(" + COLUMN_REMINDER_USER_ID + ", " + COLUMN_REMINDER_NAME + "))";
+        db.execSQL(CREATE_REMINDERS_TABLE);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // If upgrading from versions older than 8, add the new target_ml column to users
-        if (oldVersion < 8) {
-            try {
-                db.execSQL("ALTER TABLE " + TABLE_USERS + " ADD COLUMN " + COLUMN_TARGET_ML + " INTEGER DEFAULT 2000");
-            } catch (Exception ignored) {
-            }
-        }
-        // If upgrading from versions older than 9, add the new target column to water_records
-        if (oldVersion < 9) {
-            try {
-                db.execSQL("ALTER TABLE " + TABLE_WATER_RECORDS + " ADD COLUMN " + COLUMN_RECORD_TARGET + " INTEGER DEFAULT 2000");
-            } catch (Exception ignored) {
-            }
-        }
-        // If upgrading from versions older than 10, add the total column to daily_summary
-        if (oldVersion < 10) {
-            try {
-                db.execSQL("ALTER TABLE " + TABLE_DAILY_SUMMARY + " ADD COLUMN " + COLUMN_SUMMARY_TOTAL + " INTEGER DEFAULT 0");
-            } catch (Exception ignored) {
-            }
-        }
-        // If upgrading from versions older than 11, add the remaining column to daily_summary
-        if (oldVersion < 11) {
-            try {
-                db.execSQL("ALTER TABLE " + TABLE_DAILY_SUMMARY + " ADD COLUMN " + COLUMN_SUMMARY_REMAINING + " INTEGER DEFAULT 0");
-            } catch (Exception ignored) {
-            }
-        }
-
-        // Keep existing drop/create logic for other structural upgrades
-        if (oldVersion < 7) {
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
-            db.execSQL("DROP TABLE IF EXISTS water_intake");
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_WATER_RECORDS);
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_DAILY_SUMMARY);
-            onCreate(db);
+        if (oldVersion < 14) {
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_REMINDERS);
+            createRemindersTable(db);
         }
     }
 
@@ -131,22 +123,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_NAME, name);
         values.put(COLUMN_EMAIL, email);
         values.put(COLUMN_PHONE, phone);
-        values.put(COLUMN_PASSWORD, password);
-        // target_ml will default to 2000 if not provided
+        
+        // Hash the password before storing it
+        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+        values.put(COLUMN_PASSWORD, hashedPassword);
+        
         long result = db.insert(TABLE_USERS, null, values);
         return result != -1;
     }
 
     public int getUserId(String email, String password) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor = db.rawQuery(
-                "SELECT " + COLUMN_ID + " FROM " + TABLE_USERS +
-                        " WHERE " + COLUMN_EMAIL + "=? AND " + COLUMN_PASSWORD + "=?",
-                new String[]{email, password}
-        );
+        Cursor cursor = db.query(TABLE_USERS,
+                new String[]{COLUMN_ID, COLUMN_PASSWORD},
+                COLUMN_EMAIL + "=?",
+                new String[]{email},
+                null, null, null);
+
         int userId = -1;
         if (cursor.moveToFirst()) {
-            userId = cursor.getInt(0);
+            String storedHashedPassword = cursor.getString(1);
+            // Verify the entered password against the stored hash
+            if (BCrypt.checkpw(password, storedHashedPassword)) {
+                userId = cursor.getInt(0);
+            }
         }
         cursor.close();
         return userId;
@@ -157,14 +157,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.rawQuery("SELECT " + COLUMN_NAME + ", " + COLUMN_EMAIL + " FROM " + TABLE_USERS + " WHERE " + COLUMN_ID + "=?", new String[]{String.valueOf(userId)});
     }
 
-    // New: get/set per-user target
     public int getUserTarget(int userId) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.rawQuery("SELECT " + COLUMN_TARGET_ML + " FROM " + TABLE_USERS + " WHERE " + COLUMN_ID + "=?", new String[]{String.valueOf(userId)});
         int target = 2000;
         if (cursor.moveToFirst()) {
             try {
-                // defensive: if value is null or non-positive, fall back to default
                 int val = cursor.isNull(0) ? 0 : cursor.getInt(0);
                 if (val > 0) target = val;
             } catch (Exception ignored) {
@@ -180,8 +178,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_TARGET_ML, targetMl);
         db.update(TABLE_USERS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(userId)});
 
-        // After changing the target, update today's daily_summary so the completion state
-        // reflects the new target (if today's total >= new target, mark completed; otherwise clear completed)
         String today = getTodayDateString();
         int totalToday = getTotalForDate(userId, today);
         int remaining = Math.max(0, targetMl - totalToday);
@@ -197,9 +193,47 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.insertWithOnConflict(TABLE_DAILY_SUMMARY, null, summaryValues, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
+    // ---------- Reminders ----------
+    public void saveUserReminders(int userId, List<Reminder> reminders) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            for (Reminder reminder : reminders) {
+                ContentValues values = new ContentValues();
+                values.put(COLUMN_REMINDER_USER_ID, userId);
+                values.put(COLUMN_REMINDER_NAME, reminder.getName());
+                values.put(COLUMN_REMINDER_TIME, reminder.getTime());
+                values.put(COLUMN_REMINDER_IS_ENABLED, reminder.isEnabled() ? 1 : 0);
+                
+                db.insertWithOnConflict(TABLE_REMINDERS, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    public List<Reminder> getUserReminders(int userId) {
+        List<Reminder> reminders = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(TABLE_REMINDERS, 
+                new String[]{COLUMN_REMINDER_NAME, COLUMN_REMINDER_TIME, COLUMN_REMINDER_IS_ENABLED},
+                COLUMN_REMINDER_USER_ID + "=?", new String[]{String.valueOf(userId)}, null, null, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                String name = cursor.getString(0);
+                String time = cursor.getString(1);
+                boolean isEnabled = cursor.getInt(2) == 1;
+                reminders.add(new Reminder(name, time, isEnabled));
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        return reminders;
+    }
+
     // ---------- Water Records ----------
     public void addWaterRecord(int userId, int amount) {
-        // If today's summary already marked as completed, ignore further inputs for today
         if (isDayCompleted(userId)) return;
 
         SQLiteDatabase db = this.getWritableDatabase();
@@ -211,7 +245,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_TIMESTAMP, ts);
         values.put(COLUMN_AMOUNT, amount);
         values.put(COLUMN_RECORD_DATE, dateStr);
-        // capture the user's target at the time of the record
         int userTarget = getUserTarget(userId);
         values.put(COLUMN_RECORD_TARGET, userTarget);
         db.insert(TABLE_WATER_RECORDS, null, values);
@@ -306,11 +339,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_DATE, today);
         values.put(COLUMN_IS_COMPLETED, 1);
 
-        // Also update the total intake for the day
         int totalIntake = getTodayTotalIntake(userId);
         values.put(COLUMN_SUMMARY_TOTAL, totalIntake);
 
-        // store remaining (target - total, not negative)
         int target = getUserTarget(userId);
         int remaining = Math.max(0, target - totalIntake);
         values.put(COLUMN_SUMMARY_REMAINING, remaining);
@@ -337,7 +368,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return completed;
     }
 
-    // Ensure a daily_summary row exists for the given date. If missing, insert with total/is_completed/remaining
     public void ensureDailySummaryForDate(int userId, String yyyyMmDd) {
         if (summaryExistsForDate(userId, yyyyMmDd)) return;
 
@@ -368,7 +398,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return exists;
     }
 
-    // Archive previous day summary if it doesn't already exist. Call this at app start/resume.
     public void archiveYesterdayIfMissing(int userId) {
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DAY_OF_YEAR, -1);

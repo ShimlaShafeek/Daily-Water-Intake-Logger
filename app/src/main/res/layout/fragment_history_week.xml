@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="#F8FAFF">
+    android:background="#A8DDE3">
 
     <!-- Week Range Card -->
     <androidx.cardview.widget.CardView

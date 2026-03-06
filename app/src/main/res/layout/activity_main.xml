@@ -217,25 +217,25 @@
 
             <com.example.water_logger.WaterLevelView
                 android:id="@+id/waterView"
-                android:layout_width="280dp"
                 android:layout_height="280dp"
                 android:layout_marginTop="32dp"
+                android:layout_width="280dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/rowCards" />
 
             <TextView
                 android:id="@+id/tvRemainingLabel"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:layout_width="wrap_content"
                 android:text="@string/remaining_ml"
                 android:textColor="#FFFFFF"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                app:layout_constraintTop_toBottomOf="@id/waterView"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:layout_constraintTop_toBottomOf="@id/waterView" />
 
             <!-- Quick Add Section -->
             <TextView

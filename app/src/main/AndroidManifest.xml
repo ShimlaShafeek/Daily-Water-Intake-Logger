@@ -37,12 +37,12 @@
         </activity>
         <activity
             android:name=".DashboardActivity"
-            android:exported="false"
+            android:exported="true"
             android:windowSoftInputMode="adjustResize">
         </activity>
         <activity
             android:name=".ReminderActivity"
-            android:exported="false"
+            android:exported="true"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
