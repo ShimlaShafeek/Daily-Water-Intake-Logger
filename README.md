@@ -19,9 +19,9 @@
 ## 📝 Project Description
 **Water_Logger** is a modern Android application designed to help users build healthier hydration habits through daily water intake tracking. The app provides a clean, data-driven environment where users can set personal goals, monitor their progress with intuitive visualisations, and stay on track with a smart, personalised reminder system.
 
-The app's design philosophy is rooted in **Clarity, Fluidity, and Motivation** — using wave animations, smooth gradients, and glassmorphism effects to turn a daily health routine into an engaging habit-building experience.
+The app's design philosophy is rooted in **Clarity, Fluidity, and Motivation** using wave animations, smooth gradients, and glassmorphism effects to turn a daily health routine into an engaging habit-building experience.
 
-Users can register a personal account, log in securely, record their water intake, set custom hydration targets, and review their history over time — all stored locally using a SQLite database.
+Users can register a personal account, log in securely, record their water intake, set custom hydration targets, and review their history over time all stored locally using a SQLite database.
 
 ---
 
@@ -285,7 +285,7 @@ Daily-Water-Intake-Logger/
 | :--- | :--- | :--- |
 | **Team Lead & Main Developer** | Kalpa Dhananjaya | Architecture, SQLite database, BCrypt logic, Dashboard & session management |
 | **Login & Register and Database Creation** | Rifky Nazar | Page creation, wave animation, validations, database handle |
-| **Logic Specialist** | [Name] | Reminder system, chart integration, history fragments, event bus |
+| **Logic Specialist** | Simla | Reminder system, chart integration, history fragments, event bus |
 
 ---
 
@@ -308,7 +308,7 @@ Fix: Resolve Reminder constructor mismatch in DatabaseHelper
 ---
 
 ## 📄 Module Details
-- **Module:** ICT3214 — Mobile Application Development
+- **Module:** ICT3214  Mobile Application Development
 - **Project:** Daily Water Intake Loggerr (Idea #4)
 - **Academic Year:** 2021/2022
 
