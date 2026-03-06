@@ -1,5 +1,5 @@
 # 💧 Water_Logger — Daily Hydration Tracker
-**Module: ICT3214 — Mobile Application Development Project Idea: Hydration & Wellness Tracker**
+**Module: ICT3214 — Mobile Application Development Project Idea: Daily Water Intake Logger**
 
 ---
 
