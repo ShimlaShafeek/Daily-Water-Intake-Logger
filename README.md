@@ -283,12 +283,16 @@ Daily-Water-Intake-Logger/
 
 | Role | Name | Responsibilities |
 | :--- | :--- | :--- |
-| **Lead Developer** | [Name] | Architecture, SQLite database, BCrypt logic, Dashboard & session management |
-| **UI/UX Designer** | [Name] | Material 3 layouts, wave animation, glassmorphism, drawable resources |
+| **Teram lead and main developer** | Kalpa DHananjaya | Architecture, SQLite database, BCrypt logic, Dashboard & session management |
+| **login & register and database creation** | [Name] | Material 3 layouts, wave animation, glassmorphism, drawable resources |
 | **Logic Specialist** | [Name] | Reminder system, chart integration, history fragments, event bus |
 
 ---
-
+Module Details
+Module: ICT3214 — Mobile Application Development
+Project: Personal Goal Reflection App (Idea #4)
+Academic Year: 2021/2022
+---
 ## 📋 GitHub Contribution Guidelines
 
 Each team member must follow these rules for commits:
@@ -305,18 +309,9 @@ UI: Design Reminders screen with Material 3 Switch toggles
 Fix: Resolve Reminder constructor mismatch in DatabaseHelper
 ```
 
-### ❌ Avoid
-```
-update
-fix stuff
-final version
-changes
-testing
-```
-
-
-```
+📄 License
+This project is developed for academic purposes as part of the ICT3214 — Mobile Application Development module.
 
 ---
 
-*Developed for academic purposes — ICT3214 Mobile Application Development.* 🌊
+Made By Kalpa DHananjaya, KHGF,KHGF
