@@ -1,4 +1,4 @@
-# 💧 Water_Logger — Daily Hydration Tracker
+# 💧 Water_Logger : Daily Hydration Tracker
 **Module: ICT3214 — Mobile Application Development Project Idea: Daily Water Intake Logger**
 
 ---
@@ -27,7 +27,7 @@ Users can register a personal account, log in securely, record their water intak
 
 ## ✨ Features
 
-### 🔐 Authentication & Multi-User Support
+### 🔐 Authentication & Multi User Support
 - **User Registration** — Name, Email, Phone, Password with real-time validation
 - **Secure Login** — Email + Password authenticated against the local SQLite database
 - **BCrypt Hashing** — Industry-standard one-way password protection; passwords are NEVER stored in plain text
