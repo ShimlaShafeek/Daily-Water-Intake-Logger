@@ -285,7 +285,7 @@ Daily-Water-Intake-Logger/
 | :--- | :--- | :--- |
 | **Team Lead & Main Developer** | Kalpa Dhananjaya | Architecture, SQLite database, BCrypt logic, Dashboard & session management |
 | **Login & Register and Database Creation** | Rifky Nazar | Page creation, wave animation, validations, database handle |
-| **Logic Specialist** | Shimla | Reminder system, chart integration, history fragments, event bus |
+| **Logic Specialist** | M.S.F.Simla | Reminder system, chart integration, history fragments, event bus |
 
 ---
 
